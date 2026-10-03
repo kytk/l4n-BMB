@@ -1,0 +1,6 @@
+
+# bcil (l4n-bmb)
+export BCILDIR=/usr/local/bcil
+export PATH=${BCILDIR}/bin:$PATH
+# BMB scripts (l4n-bmb)
+export PATH=/usr/local/bmb-scripts:$PATH
