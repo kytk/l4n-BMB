@@ -11,7 +11,7 @@
 # Added on top of the base:
 #   - bcil (RIKEN-BCIL): HCP Pipelines QC (hcppipe_qc / hcppipe_gqc), run on
 #     the base image's MATLAB Runtime R2022b (MATLAB_MODE=runtime)
-#   - R (CRAN, >= 4.3) with ggplot2, gridExtra, qcc, and jq: needed by bcil
+#   - R (CRAN, >= 4.3) with ggplot2, qcc, and jq: needed by bcil
 #   - boldlag (RIKEN-BCIL/HCPstyle-BOLDLagMappingAndCleaning, Python port)
 #     in the base image's /opt/venv
 #   - bmb-scripts (this repository): bids2hcp.sh lays out a BMB BIDS session
@@ -26,7 +26,7 @@ ARG BASE_TAG=261003
 # The v0.1.1 tag predates the MATLAB Runtime option and the prebuilt
 # bin/compiled/ binaries, so a commit is pinned instead of the tag.
 FROM ubuntu:22.04 AS bcil-builder
-ARG BCIL_COMMIT=138fa48a200706a1deec61e3abaaf2ea94cf9ab6
+ARG BCIL_COMMIT=c4a5e529b01dcf539efe2239f21f63ee908b19bc
 RUN set -ex && \
     apt-get update && \
     apt-get install -y --no-install-recommends git ca-certificates && \
@@ -60,9 +60,9 @@ RUN set -ex && \
     apt-get update && \
     apt-get install -y --no-install-recommends r-base-core && \
     Rscript -e 'options(HTTPUserAgent = sprintf("R/%s R (%s)", getRversion(), paste(getRversion(), R.version["platform"], R.version["arch"], R.version["os"]))); \
-                install.packages(c("ggplot2", "gridExtra", "qcc"), \
+                install.packages(c("ggplot2", "qcc"), \
                   repos = "https://packagemanager.posit.co/cran/__linux__/jammy/'"$PPM_SNAPSHOT"'")' && \
-    Rscript -e 'for (p in c("ggplot2", "gridExtra", "qcc")) library(p, character.only = TRUE)' && \
+    Rscript -e 'for (p in c("ggplot2", "qcc")) library(p, character.only = TRUE)' && \
     Rscript -e 'f <- tempfile(fileext = ".png"); png(f); plot(1); dev.off(); stopifnot(file.size(f) > 0)' && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
