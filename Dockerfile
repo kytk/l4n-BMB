@@ -15,7 +15,8 @@
 #   - boldlag (RIKEN-BCIL/HCPstyle-BOLDLagMappingAndCleaning, Python port)
 #     in the base image's /opt/venv
 #   - bmb-scripts (this repository): bids2hcp.sh lays out a BMB BIDS session
-#     as HCP Pipelines' unprocessed input
+#     as HCP Pipelines' RawData input with its hcppipe_conf.txt, and the
+#     bmb_*.sh step scripts run the human pipelines from that conf
 
 # The base is pinned to a dated tag, so that a rebuild of the base never
 # changes BMB results silently. 261003: HCPpipelines v6.0.0, octave removed.
@@ -83,7 +84,7 @@ RUN set -ex && \
     /opt/venv/bin/boldlag -h > /dev/null
 USER root
 
-# BMB scripts (BIDS -> HCP Pipelines input, batches)
+# BMB scripts (BIDS -> HCP Pipelines input, step scripts)
 COPY --chmod=755 bmb-scripts/ /usr/local/bmb-scripts/
 
 # PATH for bcil and the BMB scripts, appended to the base image's .bash_aliases

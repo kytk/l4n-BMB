@@ -5,7 +5,8 @@
 # to 2 when the AP and PA series do not share a gradient table, e.g. HARP).
 #
 # Usage: bmb_diffusion.sh <StudyFolder> <Subject> [--gpu]
-#   --gpu: use eddy_cuda (default: eddy_cpu; the image has no GPU set up)
+#   --gpu: use eddy_cuda (default: eddy_cpu). Needs a GPU passed to the
+#          container (docker run --gpus all; see README.md)
 
 BMB_USAGE="[--gpu]"
 source "$(dirname "$(readlink -f "$0")")/bmb_common.sh"
