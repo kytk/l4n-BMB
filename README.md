@@ -29,7 +29,7 @@ Added for BMB:
 - **[bcil](https://github.com/RIKEN-BCIL/bcil)** (commit `c4a5e52`): QC reports for HCP Pipelines (`hcppipe_qc`, `hcppipe_gqc`), run on the MATLAB Runtime
 - **[boldlag](https://github.com/RIKEN-BCIL/HCPstyle-BOLDLagMappingAndCleaning)** v0.2.0: BOLD lag mapping and cleaning (in `/opt/venv`)
 - **R** 4.6 with ggplot2 and qcc, **jq** (used by bcil)
-- **[cuDIMOT](https://users.fmrib.ox.ac.uk/~moisesf/cudimot/)** NODDI-Watson (prebuilt for CUDA 10.2, in `/usr/local/cudimot`): NODDI on the GPU. **Needs an NVIDIA GPU**
+- **[cuDIMOT](https://users.fmrib.ox.ac.uk/~moisesf/cudimot/)** NODDI-Watson (built with CUDA 12.8 for RTX 30/40/50 series, in `/usr/local/cudimot`): NODDI on the GPU, with the axial diffusivity at 1.7 × 10⁻³ mm²/s (white matter, the default) or 1.1 × 10⁻³ mm²/s (grey matter). **Needs an NVIDIA GPU**
 
 ### Prerequisites
 
@@ -72,6 +72,37 @@ http://127.0.0.1:6080/vnc.html
 ```
 
 You will see the Lin4Neuro desktop environment with XFCE4 (password: `lin4neuro`).
+
+### Accessing from a Terminal
+
+The container runs the desktop in the foreground, so `docker run -it` does not give you a shell. Start the container as above, then open a shell in it from a terminal on the host:
+
+```bash
+docker exec -it -u brain -w /home/brain l4n-bmb bash
+```
+
+- `-u brain`: log in as the `brain` user. Without it you are `root`, and files you create in `share/` will be owned by `root`
+- `-w /home/brain`: start in the home directory (`-w` = working directory)
+- FSL, FreeSurfer, HCP Pipelines and the BMB scripts are set up automatically (by `~/.bashrc`)
+- You may see `xset: unable to open display ":1"` when you log in. It is harmless
+- `exit` leaves the shell; the container keeps running, and you can `docker exec` into it again at any time
+
+To run a single command without opening a shell:
+
+```bash
+docker exec -u brain -w /home/brain l4n-bmb bash -ic 'bids2hcp.sh ...'
+```
+
+If you do not need the desktop at all, you can start the container directly in a shell. In this case the desktop (noVNC) is not started and the ownership of `share/` is not adjusted:
+
+```bash
+docker run -it --rm \
+  --shm-size=4g \
+  --platform linux/amd64 \
+  -u brain -w /home/brain \
+  -v .:/home/brain/share \
+  kytk/l4n-bmb:latest bash
+```
 
 ### Setting up FreeSurfer License
 
@@ -158,10 +189,11 @@ hcppipe_gqc <Group> <Protocol> <Subj1>@<Subj2> ...   # group QC
 After `bmb_diffusion.sh`, `T1w/Diffusion/` has what cuDIMOT expects (`data`, `nodif_brain_mask`, `bvals`, `bvecs`):
 
 ```bash
-Pipeline_NODDI_Watson.sh $S/$J/T1w/Diffusion
+Pipeline_NODDI_Watson.sh $S/$J/T1w/Diffusion           # axial diffusivity 1.7e-3 mm²/s (white matter)
+Pipeline_NODDI_Watson_Dpar1p1.sh $S/$J/T1w/Diffusion   # axial diffusivity 1.1e-3 mm²/s (grey matter)
 ```
 
-The results go to `$S/$J/T1w/Diffusion.NODDI_Watson/` (`mean_fintra` = neurite density, `OD` = orientation dispersion index, `mean_fiso`, `mean_kappa`, `dyads1`). The container must be started with the GPU (see [Using an NVIDIA GPU](#using-an-nvidia-gpu)); there is no CPU version. The binaries were built with CUDA 10.2, which targets GPUs up to Turing; whether they run on newer GPUs (Ampere and later) is not yet confirmed.
+The results go to `$S/$J/T1w/Diffusion.NODDI_Watson/` and `$S/$J/T1w/Diffusion.NODDI_Watson_Dpar1p1/` (`mean_fintra` = neurite density, `OD` = orientation dispersion index, `mean_fiso`, `mean_kappa`, `dyads1`). The axial (intrinsic parallel) diffusivity is fixed when the model is compiled, so the two are separate programs; nothing else differs between them. The container must be started with the GPU (see [Using an NVIDIA GPU](#using-an-nvidia-gpu)); there is no CPU version. The binaries are built with CUDA 12.8 for RTX 30, 40 and 50 series GPUs (sm_86, sm_89, sm_120); the host needs only the NVIDIA driver, not CUDA. How they are built: [build_cudimot.md](build_cudimot.md) (Japanese).
 
 ### Custom Resolution
 
@@ -276,7 +308,7 @@ BMB 用に追加したもの：
 - **[bcil](https://github.com/RIKEN-BCIL/bcil)**（コミット `c4a5e52`）: HCP Pipelines の QC レポート（`hcppipe_qc`、`hcppipe_gqc`）。MATLAB Runtime で動きます
 - **[boldlag](https://github.com/RIKEN-BCIL/HCPstyle-BOLDLagMappingAndCleaning)** v0.2.0: BOLD lag mapping と cleaning（`/opt/venv` に導入）
 - **R** 4.6（ggplot2、qcc）、**jq**（bcil が使います）
-- **[cuDIMOT](https://users.fmrib.ox.ac.uk/~moisesf/cudimot/)** NODDI-Watson（CUDA 10.2 向けのビルド済みバイナリ。`/usr/local/cudimot`）: GPU で NODDI を推定します。**NVIDIA GPU が必要です**
+- **[cuDIMOT](https://users.fmrib.ox.ac.uk/~moisesf/cudimot/)** NODDI-Watson（RTX 30/40/50 系向けに CUDA 12.8 でビルド。`/usr/local/cudimot`）: GPU で NODDI を推定します。axial diffusivity が 1.7 × 10⁻³ mm²/s（白質用、既定）の版と 1.1 × 10⁻³ mm²/s（灰白質用）の版があります。**NVIDIA GPU が必要です**
 
 ### 事前準備
 
@@ -319,6 +351,37 @@ http://127.0.0.1:6080/vnc.html
 ```
 
 XFCE4 デスクトップ環境の Lin4Neuro が表示されます（パスワード: `lin4neuro`）。
+
+### ターミナルからのアクセス
+
+コンテナはデスクトップをフォアグラウンドで動かしているため、`docker run -it` ではシェルに入れません。上の手順でコンテナを起動したうえで、ホストのターミナルから以下を実行してください：
+
+```bash
+docker exec -it -u brain -w /home/brain l4n-bmb bash
+```
+
+- `-u brain`: `brain` ユーザーで入ります。付けないと `root` になり、`share/` に作ったファイルの所有者が `root` になります
+- `-w /home/brain`: ホームディレクトリから始めます（`-w` は working directory）
+- FSL、FreeSurfer、HCP Pipelines、BMB のスクリプトの環境は自動で設定されます（`~/.bashrc` による）
+- 入ったときに `xset: unable to open display ":1"` と表示されることがありますが、問題ありません
+- `exit` で抜けてもコンテナは動き続けます。何度でも `docker exec` で入り直せます
+
+シェルに入らずにコマンドを 1 つだけ実行する場合：
+
+```bash
+docker exec -u brain -w /home/brain l4n-bmb bash -ic 'bids2hcp.sh ...'
+```
+
+デスクトップがまったく不要なら、コンテナを最初からシェルで起動することもできます。この場合、デスクトップ（noVNC）は起動せず、`share/` の所有者の調整も行われません：
+
+```bash
+docker run -it --rm \
+  --shm-size=4g \
+  --platform linux/amd64 \
+  -u brain -w /home/brain \
+  -v .:/home/brain/share \
+  kytk/l4n-bmb:latest bash
+```
 
 ### FreeSurfer ライセンスの設定
 
@@ -405,10 +468,11 @@ hcppipe_gqc <Group> <Protocol> <Subj1>@<Subj2> ...   # グループ QC
 `bmb_diffusion.sh` の後の `T1w/Diffusion/` には、cuDIMOT が必要とするもの（`data`、`nodif_brain_mask`、`bvals`、`bvecs`）がそろっています：
 
 ```bash
-Pipeline_NODDI_Watson.sh $S/$J/T1w/Diffusion
+Pipeline_NODDI_Watson.sh $S/$J/T1w/Diffusion           # axial diffusivity 1.7e-3 mm²/s（白質用）
+Pipeline_NODDI_Watson_Dpar1p1.sh $S/$J/T1w/Diffusion   # axial diffusivity 1.1e-3 mm²/s（灰白質用）
 ```
 
-結果は `$S/$J/T1w/Diffusion.NODDI_Watson/` に出ます（`mean_fintra` = 神経突起密度、`OD` = 方向分散指数、`mean_fiso`、`mean_kappa`、`dyads1`）。コンテナは GPU を使える状態で起動してください（[NVIDIA GPU を使う](#nvidia-gpu-を使う) を参照）。CPU 版はありません。バイナリは CUDA 10.2 でビルドされていて、対象は Turing 世代までの GPU です。それより新しい GPU（Ampere 以降）で動くかは、まだ確認していません。
+結果は `$S/$J/T1w/Diffusion.NODDI_Watson/` と `$S/$J/T1w/Diffusion.NODDI_Watson_Dpar1p1/` に出ます（`mean_fintra` = 神経突起密度、`OD` = 方向分散指数、`mean_fiso`、`mean_kappa`、`dyads1`）。axial diffusivity（軸索内の平行方向の拡散係数）はモデルをコンパイルするときに決まる定数なので、2 つは別のプログラムになっています。違いはこの値だけです。コンテナは GPU を使える状態で起動してください（[NVIDIA GPU を使う](#nvidia-gpu-を使う) を参照）。CPU 版はありません。バイナリは RTX 30、40、50 系（sm_86、sm_89、sm_120）向けに CUDA 12.8 でビルドしています。ホストに要るのは NVIDIA ドライバだけで、CUDA は要りません。ビルドの方法は [build_cudimot.md](build_cudimot.md) にあります。
 
 ### カスタム解像度
 
@@ -506,8 +570,8 @@ This Docker container includes multiple software packages, each with its own lic
 - FSL: Requires registration and license agreement
 - HCP Pipelines: Custom license by Washington University
 - bcil, boldlag: see their repositories (RIKEN-BCIL)
-- cuDIMOT: University of Oxford (FMRIB)
-- CUDA runtime library (libcudart 10.2): NVIDIA CUDA Toolkit EULA
+- cuDIMOT: University of Oxford (FMRIB); built from SPMIC-UoN/cudimot, with the source as built in `/usr/local/cudimot/src`
+- CUDA runtime (linked into the cuDIMOT binaries): NVIDIA CUDA Toolkit EULA
 - bmb-scripts: MIT License (this repository)
 - Other software: Various open-source licenses
 

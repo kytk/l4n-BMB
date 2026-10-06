@@ -2,7 +2,7 @@
 
 # Dockerfile for kytk/l4n-bmb
 # Author: K. Nemoto
-# Date: 6 Oct 2026
+# Date: 7 Oct 2026
 # Description: kytk/l4n-hcppipelines plus the tools for the Brain/MINDS Beyond
 #              (BMB, "International Brain") dataset. Everything HCP Pipelines
 #              needs (FreeSurfer, FSL, MCR, Workbench, HCPpipelines) comes from
@@ -14,8 +14,10 @@
 #   - R (CRAN, >= 4.3) with ggplot2, qcc, and jq: needed by bcil
 #   - boldlag (RIKEN-BCIL/HCPstyle-BOLDLagMappingAndCleaning, Python port)
 #     in the base image's /opt/venv
-#   - cuDIMOT NODDI-Watson (GPU only; prebuilt for CUDA 10.2) in
-#     /usr/local/cudimot, with the CUDA 10.2 runtime library it links
+#   - cuDIMOT NODDI-Watson (GPU only), built from source with CUDA 12.8 for
+#     RTX 30/40/50 series, in two versions: NODDI_Watson (Dparallel 1.7e-3,
+#     white matter) and NODDI_Watson_Dpar1p1 (1.1e-3, grey matter), in
+#     /usr/local/cudimot
 #   - bmb-scripts (this repository): bids2hcp.sh lays out a BMB BIDS session
 #     as HCP Pipelines' RawData input with its hcppipe_conf.txt, and the
 #     bmb_*.sh step scripts run the human pipelines from that conf
@@ -24,7 +26,7 @@
 # The base is pinned to a dated tag, so that a rebuild of the base never
 # changes BMB results silently. 261004: HCPpipelines v6.0.0, octave removed,
 # Qt6 xcb libraries for wb_view.
-ARG BASE_TAG=261006
+ARG BASE_TAG=261007
 
 # bcil-builder: clone bcil at a fixed commit and drop what the image does not
 # need *before* COPY --from (deleting in a later layer does not shrink it).
@@ -42,30 +44,35 @@ RUN set -ex && \
     # and marmoset as well, and the image keeps that.
     rm -rf .git
 
-# cudimot-builder: cuDIMOT's prebuilt NODDI-Watson (CUDA 10.2 build) from
-# build/packages. Watson only: Bingham adds dispersion anisotropy at the cost
-# of two more parameters, and Watson is the NODDI the literature compares to.
-# - The binaries link libcudart.so.10.2 dynamically and the image has no CUDA
-#   10.2, so the runtime alone (one 500 KB library) is taken from NVIDIA's
-#   cuda-cudart-10-2 .deb (ubuntu1804 repo; SHA256 c958ac27...aec82, checked
-#   against the repo index). The driver library (libcuda.so.1) comes from the
-#   host with docker run --gpus all.
-# - The scripts say #!/bin/sh but use bash syntax (jobs_wrapper.sh: ${@:6}),
-#   which dash, Ubuntu's /bin/sh, rejects with "Bad substitution".
-FROM ubuntu:22.04 AS cudimot-builder
-RUN --mount=type=bind,source=build/packages/NODDI_Watson.zip,target=/tmp/packages/NODDI_Watson.zip \
-    --mount=type=bind,source=build/packages/cuda-cudart-10-2_10.2.89-1_amd64.deb,target=/tmp/packages/cuda-cudart.deb \
+# cudimot-builder: cuDIMOT NODDI-Watson built from source (build/cudimot/,
+# see build_cudimot.md), against the base image's FSL so that the libraries
+# the binaries link are the ones in the final image.
+# - Source: SPMIC-UoN/cudimot (University of Nottingham's maintained fork,
+#   also what our collaborators build). It has a fix FSL's GitLab copy lacks:
+#   WatsonFunctions.h switches to the series approximation below kappa 0.4
+#   (was 0.1); in between, the "exact" formula loses precision and the
+#   predicted signal is off by up to 29% (kappa 0.2, Dparallel 1.1e-3).
+# - The CUDA 10.2 binaries upstream distributes do not run on RTX 50 series
+#   ("no kernel image is available"); CUDA 12.8 is the first to target them
+#   (sm_120). CUDA (from conda-forge) is used only here: the runtime is
+#   linked statically, and the host needs only the NVIDIA driver.
+# - Dparallel is a compile-time constant (diffusivities.h), so the 1.1e-3
+#   version is a second model, NODDI_Watson_Dpar1p1, with its own scripts
+#   (Pipeline_NODDI_Watson_Dpar1p1.sh) and output (<dir>.NODDI_Watson_Dpar1p1/).
+# - Watson only: Bingham adds dispersion anisotropy at the cost of two more
+#   parameters, and Watson is the NODDI the literature compares to.
+# - The source as built goes into /usr/local/cudimot/src (licence condition).
+FROM kytk/l4n-hcppipelines:${BASE_TAG} AS cudimot-builder
+ARG CUDIMOT_COMMIT=5f9e4ff1bbb8f08de1a7e25f988ed7e0b62072fd
+ARG CUDIMOT_CUDA=12.8
+USER root
+RUN --mount=type=bind,source=build/cudimot,target=/tmp/cudimot-build \
     set -ex && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends unzip && \
-    mkdir -p /usr/local/cudimot/lib && \
-    cd /usr/local/cudimot && \
-    unzip -q /tmp/packages/NODDI_Watson.zip && \
-    sed -i '1s|^#!/bin/sh$|#!/bin/bash|' bin/*.sh && \
-    ! grep -l '^#!/bin/sh$' bin/*.sh && \
-    dpkg-deb -x /tmp/packages/cuda-cudart.deb /tmp/cudart && \
-    cp -a /tmp/cudart/usr/local/cuda-10.2/targets/x86_64-linux/lib/libcudart.so.10.2* lib/ && \
-    test -f lib/libcudart.so.10.2.89
+    git clone https://github.com/SPMIC-UoN/cudimot.git /tmp/cudimot-src && \
+    cd /tmp/cudimot-src && \
+    git checkout "$CUDIMOT_COMMIT" && \
+    CUDA_VERSION="$CUDIMOT_CUDA" \
+      /tmp/cudimot-build/build.sh /tmp/cudimot-src /tmp/cudimot-build /usr/local/cudimot
 
 FROM kytk/l4n-hcppipelines:${BASE_TAG}
 
@@ -102,26 +109,28 @@ COPY --from=bcil-builder /usr/local/bcil/ /usr/local/bcil/
 # Replaces upstream's settings.sh, which hard-codes RIKEN's paths
 COPY build/bcil/settings.sh /usr/local/bcil/bcilconf/settings.sh
 
-# cuDIMOT (NODDI-Watson). libcudart.so.10.2 goes through ldconfig rather than
-# LD_LIBRARY_PATH, so that the jobs fsl_sub starts find it too. ldd fails the
-# build if any binary is still missing a library.
+# cuDIMOT (NODDI-Watson, Dparallel 1.7e-3 and 1.1e-3). ldd fails the build if
+# any binary is missing a library.
 COPY --from=cudimot-builder /usr/local/cudimot/ /usr/local/cudimot/
 RUN set -ex && \
-    echo /usr/local/cudimot/lib > /etc/ld.so.conf.d/cudimot.conf && \
-    ldconfig && \
     for f in NODDI_Watson split_parts_NODDI_Watson merge_parts_NODDI_Watson \
-             cart2spherical; do \
+             NODDI_Watson_Dpar1p1 split_parts_NODDI_Watson_Dpar1p1 \
+             merge_parts_NODDI_Watson_Dpar1p1 cart2spherical; do \
       if ldd /usr/local/cudimot/bin/$f | grep 'not found'; then exit 1; fi; \
     done
 
 # boldlag into the base image's /opt/venv. /opt/venv belongs to brain, so pip
 # runs as brain: files installed as root would keep brain from upgrading
 # them later, and a chown afterwards would duplicate the layer.
+# numpy is pinned to the base image's version (numpy >= 2.4 does not work on
+# macOS), so that boldlag's dependencies cannot upgrade it.
 ARG BOLDLAG_VERSION=v0.2.0
 USER brain
 RUN set -ex && \
     /opt/venv/bin/pip install --no-cache-dir \
+      numpy==2.3.5 \
       "boldlag[web] @ git+https://github.com/RIKEN-BCIL/HCPstyle-BOLDLagMappingAndCleaning@${BOLDLAG_VERSION}" && \
+    /opt/venv/bin/python -c 'import numpy; assert numpy.__version__ == "2.3.5", numpy.__version__' && \
     /opt/venv/bin/boldlag -h > /dev/null
 USER root
 

@@ -26,7 +26,7 @@
   - [bcil](https://github.com/RIKEN-BCIL/bcil) (`c4a5e52`): HCP Pipelines QC (`hcppipe_qc`, `hcppipe_gqc`) on the MATLAB Runtime
   - [boldlag](https://github.com/RIKEN-BCIL/HCPstyle-BOLDLagMappingAndCleaning) v0.2.0
   - R 4.6 (ggplot2, qcc), jq
-  - [cuDIMOT](https://users.fmrib.ox.ac.uk/~moisesf/cudimot/) NODDI-Watson (GPU only, CUDA 10.2 build)
+  - [cuDIMOT](https://users.fmrib.ox.ac.uk/~moisesf/cudimot/) NODDI-Watson (GPU only; CUDA 12.8 build for RTX 30/40/50 series; axial diffusivity 1.7e-3 or 1.1e-3 mm²/s)
 - **Development Tools**: Python 3.12 (venv at `/opt/venv`), Jupyter Notebook, Git
 - **Python Packages**: numpy, pandas, matplotlib, seaborn, nibabel, nipype, pcntoolkit, and more
 - **Multi-language Support**: English and Japanese fonts/locales
@@ -136,8 +136,10 @@ bmb_diffusion.sh $S $J [--gpu]
 # 3. QC (bcil)
 hcppipe_qc $S $J -s -d -f
 
-# 4. NODDI-Watson (cuDIMOT; GPU only) -> T1w/Diffusion.NODDI_Watson/
+# 4. NODDI-Watson (cuDIMOT; GPU only) -> T1w/Diffusion.NODDI_Watson/ (axial diffusivity 1.7e-3 mm²/s, white matter)
 Pipeline_NODDI_Watson.sh $S/$J/T1w/Diffusion
+#    1.1e-3 mm²/s (grey matter) -> T1w/Diffusion.NODDI_Watson_Dpar1p1/
+Pipeline_NODDI_Watson_Dpar1p1.sh $S/$J/T1w/Diffusion
 ```
 
 `BMB_DRYRUN=1 bmb_<step>.sh ...` prints the pipeline command without running it. `bids2hcp_map.tsv` in RawData records which BIDS files were used or dropped.
@@ -248,7 +250,7 @@ docker rm -f l4n-bmb
   - [bcil](https://github.com/RIKEN-BCIL/bcil)（`c4a5e52`）: HCP Pipelines の QC（`hcppipe_qc`、`hcppipe_gqc`）。MATLAB Runtime で動作
   - [boldlag](https://github.com/RIKEN-BCIL/HCPstyle-BOLDLagMappingAndCleaning) v0.2.0
   - R 4.6（ggplot2、qcc）、jq
-  - [cuDIMOT](https://users.fmrib.ox.ac.uk/~moisesf/cudimot/) NODDI-Watson（GPU のみ。CUDA 10.2 向けビルド）
+  - [cuDIMOT](https://users.fmrib.ox.ac.uk/~moisesf/cudimot/) NODDI-Watson（GPU のみ。RTX 30/40/50 系向けに CUDA 12.8 でビルド。axial diffusivity 1.7e-3 と 1.1e-3 mm²/s の 2 版）
 - **開発ツール**: Python 3.12 (venv: `/opt/venv`), Jupyter Notebook, Git
 - **Python パッケージ**: numpy, pandas, matplotlib, seaborn, nibabel, nipype, pcntoolkit など
 - **多言語サポート**: 英語・日本語フォント/ロケール
@@ -358,8 +360,10 @@ bmb_diffusion.sh $S $J [--gpu]
 # 3. QC（bcil）
 hcppipe_qc $S $J -s -d -f
 
-# 4. NODDI-Watson（cuDIMOT。GPU のみ）-> T1w/Diffusion.NODDI_Watson/
+# 4. NODDI-Watson（cuDIMOT。GPU のみ）-> T1w/Diffusion.NODDI_Watson/（axial diffusivity 1.7e-3 mm²/s、白質用）
 Pipeline_NODDI_Watson.sh $S/$J/T1w/Diffusion
+#    1.1e-3 mm²/s（灰白質用）-> T1w/Diffusion.NODDI_Watson_Dpar1p1/
+Pipeline_NODDI_Watson_Dpar1p1.sh $S/$J/T1w/Diffusion
 ```
 
 `BMB_DRYRUN=1 bmb_<ステップ>.sh ...` とすると、パイプラインのコマンドを表示するだけで実行しません。どの BIDS ファイルを使ったか（使わなかったか）は RawData の `bids2hcp_map.tsv` に記録されます。
@@ -478,7 +482,7 @@ docker rm -f l4n-bmb
 - bcil: `c4a5e52`
 - boldlag: v0.2.0
 - R: 4.6.1 (ggplot2, qcc from Posit Package Manager, 2026-10-01 snapshot)
-- cuDIMOT: NODDI-Watson, prebuilt for CUDA 10.2 (with libcudart 10.2.89)
+- cuDIMOT: NODDI-Watson, built from SPMIC-UoN/cudimot (`5f9e4ff`) with CUDA 12.8 (sm_86, sm_89, sm_120; runtime linked statically). The source as built is in `/usr/local/cudimot/src`
 
 ### License
 This container includes multiple software packages, each with its own license. Users are responsible for ensuring compliance with all applicable licenses:
@@ -489,7 +493,7 @@ This container includes multiple software packages, each with its own license. U
 - bcil, boldlag: see their repositories (RIKEN-BCIL)
 - bmb-scripts: MIT License
 - cuDIMOT: University of Oxford (FMRIB)
-- CUDA runtime library (libcudart 10.2): NVIDIA CUDA Toolkit EULA
+- CUDA runtime (linked into the cuDIMOT binaries): NVIDIA CUDA Toolkit EULA
 - Other software: Various open-source licenses
 
 ### Support
