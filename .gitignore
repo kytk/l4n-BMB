@@ -4,3 +4,8 @@ build.log
 # Local working notes
 CLAUDE.md
 LOG.md
+RUN_TEST.md
+RUN_TEST_GPU.md
+
+# Build inputs that are too large for git (zips, tarballs, .deb)
+build/packages/*

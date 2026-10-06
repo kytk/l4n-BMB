@@ -10,7 +10,7 @@ English | [日本語](#日本語)
 
 ### Included Software
 
-From the base image `kytk/l4n-hcppipelines` (tag `261003`):
+From the base image `kytk/l4n-hcppipelines` (tag `261004`):
 
 - **HCP Pipelines** v6.0.0
 - **FreeSurfer** 6.0.1
@@ -25,9 +25,11 @@ From the base image `kytk/l4n-hcppipelines` (tag `261003`):
 Added for BMB:
 
 - **bmb-scripts** (this repository): `bids2hcp.sh`, `bids2seriesinfo.py` and the step scripts `bmb_*.sh` (see [Processing BMB Data](#processing-bmb-data))
+- **pyfix model trained on BMB HARP data** (`/usr/local/bmb-models/HARP.pyfix_model`): the ICA-FIX classifier `bmb_icafix.sh` uses
 - **[bcil](https://github.com/RIKEN-BCIL/bcil)** (commit `c4a5e52`): QC reports for HCP Pipelines (`hcppipe_qc`, `hcppipe_gqc`), run on the MATLAB Runtime
 - **[boldlag](https://github.com/RIKEN-BCIL/HCPstyle-BOLDLagMappingAndCleaning)** v0.2.0: BOLD lag mapping and cleaning (in `/opt/venv`)
 - **R** 4.6 with ggplot2 and qcc, **jq** (used by bcil)
+- **[cuDIMOT](https://users.fmrib.ox.ac.uk/~moisesf/cudimot/)** NODDI-Watson (prebuilt for CUDA 10.2, in `/usr/local/cudimot`): NODDI on the GPU. **Needs an NVIDIA GPU**
 
 ### Prerequisites
 
@@ -133,7 +135,7 @@ bmb_fs.sh          $S $J            # FreeSurfer
 bmb_postfs.sh      $S $J            # PostFreeSurfer
 bmb_fmrivolume.sh  $S $J [fMRIName] # fMRIVolume (all runs, or one run)
 bmb_fmrisurface.sh $S $J [fMRIName] # fMRISurface
-bmb_icafix.sh      $S $J            # multi-run ICA-FIX (pyfix) over all runs
+bmb_icafix.sh      $S $J            # multi-run ICA-FIX (pyfix, BMB HARP model) over all runs
 bmb_diffusion.sh   $S $J [--gpu]    # DiffusionPreprocessing (eddy_cpu, or eddy_cuda with --gpu)
 ```
 
@@ -150,6 +152,16 @@ hcppipe_gqc <Group> <Protocol> <Subj1>@<Subj2> ...   # group QC
 ```
 
 `hcppipe_qc -f` needs the ICA-FIX output. Run a command without arguments to see its options. bcil runs on the MATLAB Runtime (`MATLAB_MODE=runtime`); no MATLAB license is needed.
+
+#### 4. NODDI (cuDIMOT, GPU only)
+
+After `bmb_diffusion.sh`, `T1w/Diffusion/` has what cuDIMOT expects (`data`, `nodif_brain_mask`, `bvals`, `bvecs`):
+
+```bash
+Pipeline_NODDI_Watson.sh $S/$J/T1w/Diffusion
+```
+
+The results go to `$S/$J/T1w/Diffusion.NODDI_Watson/` (`mean_fintra` = neurite density, `OD` = orientation dispersion index, `mean_fiso`, `mean_kappa`, `dyads1`). The container must be started with the GPU (see [Using an NVIDIA GPU](#using-an-nvidia-gpu)); there is no CPU version. The binaries were built with CUDA 10.2, which targets GPUs up to Turing; whether they run on newer GPUs (Ampere and later) is not yet confirmed.
 
 ### Custom Resolution
 
@@ -170,7 +182,7 @@ Default resolution: 1920x1080x24. The value must be `WIDTHxHEIGHTxDEPTH` (depth 
 
 ### Using an NVIDIA GPU
 
-The FSL CUDA programs (`eddy_cuda`, `bedpostx_gpu`, `xfibres_gpu`, `probtrackx2_gpu`, `mmorf_cuda`) are included. To run them on the GPU, the host needs:
+The FSL CUDA programs (`eddy_cuda`, `bedpostx_gpu`, `xfibres_gpu`, `probtrackx2_gpu`, `mmorf_cuda`) and cuDIMOT are included. To run them on the GPU, the host needs:
 
 - **Linux:** the NVIDIA driver and the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html). After installing the toolkit, run:
   ```bash
@@ -203,7 +215,7 @@ nvidia-smi                          # the GPU is listed
 find_cuda_exe eddy_cuda eddy_cpu    # prints /usr/local/fsl/bin/eddy_cuda
 ```
 
-Then run `bmb_diffusion.sh <StudyFolder> <Subject> --gpu`.
+Then run `bmb_diffusion.sh <StudyFolder> <Subject> --gpu`, or cuDIMOT.
 
 ### Container Management
 
@@ -245,7 +257,7 @@ For issues and questions, please visit:
 
 ### 含まれるソフトウェア
 
-土台のイメージ `kytk/l4n-hcppipelines`（タグ `261003`）から：
+土台のイメージ `kytk/l4n-hcppipelines`（タグ `261004`）から：
 
 - **HCP Pipelines** v6.0.0
 - **FreeSurfer** 6.0.1
@@ -260,9 +272,11 @@ For issues and questions, please visit:
 BMB 用に追加したもの：
 
 - **bmb-scripts**（このリポジトリ）: `bids2hcp.sh`、`bids2seriesinfo.py`、ステップごとのスクリプト `bmb_*.sh`（[BMB データの処理](#bmb-データの処理) を参照）
+- **BMB HARP のデータで学習した pyfix のモデル**（`/usr/local/bmb-models/HARP.pyfix_model`）: `bmb_icafix.sh` が ICA-FIX の分類に使います
 - **[bcil](https://github.com/RIKEN-BCIL/bcil)**（コミット `c4a5e52`）: HCP Pipelines の QC レポート（`hcppipe_qc`、`hcppipe_gqc`）。MATLAB Runtime で動きます
 - **[boldlag](https://github.com/RIKEN-BCIL/HCPstyle-BOLDLagMappingAndCleaning)** v0.2.0: BOLD lag mapping と cleaning（`/opt/venv` に導入）
 - **R** 4.6（ggplot2、qcc）、**jq**（bcil が使います）
+- **[cuDIMOT](https://users.fmrib.ox.ac.uk/~moisesf/cudimot/)** NODDI-Watson（CUDA 10.2 向けのビルド済みバイナリ。`/usr/local/cudimot`）: GPU で NODDI を推定します。**NVIDIA GPU が必要です**
 
 ### 事前準備
 
@@ -368,7 +382,7 @@ bmb_fs.sh          $S $J            # FreeSurfer
 bmb_postfs.sh      $S $J            # PostFreeSurfer
 bmb_fmrivolume.sh  $S $J [fMRIName] # fMRIVolume（全 run、または 1 run）
 bmb_fmrisurface.sh $S $J [fMRIName] # fMRISurface
-bmb_icafix.sh      $S $J            # 全 run を連結した multi-run ICA-FIX（pyfix）
+bmb_icafix.sh      $S $J            # 全 run を連結した multi-run ICA-FIX（pyfix、BMB HARP のモデル）
 bmb_diffusion.sh   $S $J [--gpu]    # DiffusionPreprocessing（eddy_cpu。--gpu で eddy_cuda）
 ```
 
@@ -385,6 +399,16 @@ hcppipe_gqc <Group> <Protocol> <Subj1>@<Subj2> ...   # グループ QC
 ```
 
 `hcppipe_qc -f` には ICA-FIX の出力が必要です。オプションは、各コマンドを引数なしで実行すると表示されます。bcil は MATLAB Runtime で動くので（`MATLAB_MODE=runtime`）、MATLAB のライセンスは不要です。
+
+#### 4. NODDI（cuDIMOT、GPU のみ）
+
+`bmb_diffusion.sh` の後の `T1w/Diffusion/` には、cuDIMOT が必要とするもの（`data`、`nodif_brain_mask`、`bvals`、`bvecs`）がそろっています：
+
+```bash
+Pipeline_NODDI_Watson.sh $S/$J/T1w/Diffusion
+```
+
+結果は `$S/$J/T1w/Diffusion.NODDI_Watson/` に出ます（`mean_fintra` = 神経突起密度、`OD` = 方向分散指数、`mean_fiso`、`mean_kappa`、`dyads1`）。コンテナは GPU を使える状態で起動してください（[NVIDIA GPU を使う](#nvidia-gpu-を使う) を参照）。CPU 版はありません。バイナリは CUDA 10.2 でビルドされていて、対象は Turing 世代までの GPU です。それより新しい GPU（Ampere 以降）で動くかは、まだ確認していません。
 
 ### カスタム解像度
 
@@ -405,7 +429,7 @@ docker run \
 
 ### NVIDIA GPU を使う
 
-FSL の CUDA 版プログラム（`eddy_cuda`、`bedpostx_gpu`、`xfibres_gpu`、`probtrackx2_gpu`、`mmorf_cuda`）が入っています。GPU で動かすには、ホスト側に以下が必要です。
+FSL の CUDA 版プログラム（`eddy_cuda`、`bedpostx_gpu`、`xfibres_gpu`、`probtrackx2_gpu`、`mmorf_cuda`）と cuDIMOT が入っています。GPU で動かすには、ホスト側に以下が必要です。
 
 - **Linux:** NVIDIA ドライバと [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)。Toolkit を入れたあと、以下を実行します：
   ```bash
@@ -438,7 +462,7 @@ nvidia-smi                          # GPU が表示される
 find_cuda_exe eddy_cuda eddy_cpu    # /usr/local/fsl/bin/eddy_cuda と表示される
 ```
 
-そのうえで `bmb_diffusion.sh <StudyFolder> <Subject> --gpu` を実行します。
+そのうえで `bmb_diffusion.sh <StudyFolder> <Subject> --gpu` や cuDIMOT を実行します。
 
 ### コンテナ管理
 
@@ -482,8 +506,10 @@ This Docker container includes multiple software packages, each with its own lic
 - FSL: Requires registration and license agreement
 - HCP Pipelines: Custom license by Washington University
 - bcil, boldlag: see their repositories (RIKEN-BCIL)
+- cuDIMOT: University of Oxford (FMRIB)
+- CUDA runtime library (libcudart 10.2): NVIDIA CUDA Toolkit EULA
 - bmb-scripts: MIT License (this repository)
 - Other software: Various open-source licenses
 
 **Author:** K. Nemoto
-**Date:** 2026-10-04
+**Date:** 2026-10-05

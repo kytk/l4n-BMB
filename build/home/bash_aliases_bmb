@@ -4,3 +4,6 @@ export BCILDIR=/usr/local/bcil
 export PATH=${BCILDIR}/bin:$PATH
 # BMB scripts (l4n-bmb)
 export PATH=/usr/local/bmb-scripts:$PATH
+# cuDIMOT (l4n-bmb): $CUDIMOT/bin/Pipeline_NODDI_Watson.sh needs a GPU
+export CUDIMOT=/usr/local/cudimot
+export PATH=${CUDIMOT}/bin:$PATH

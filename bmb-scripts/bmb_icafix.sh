@@ -3,10 +3,16 @@
 # concatenated as Fmriconcatlist (hcppipe_conf.txt).
 # As Examples/Scripts/IcaFixProcessingBatch.sh (pyfix, no high-pass filter,
 # no motion regression, threshold 10).
+# --training-file is the pyfix model trained on BMB HARP data, given as an
+# absolute path: hcp_fix_multi_run (v6.0.0) prefixes a relative name with
+# $(pwd)/, and passes a *.pyfix_model on to fix -c as is (no conversion).
 #
 # Usage: bmb_icafix.sh <StudyFolder> <Subject>
 
 source "$(dirname "$(readlink -f "$0")")/bmb_common.sh"
+
+FixModel=/usr/local/bmb-models/HARP.pyfix_model
+[[ -f $FixModel ]] || die "$FixModel not found"
 
 Results="$StudyFolder/$Subject/MNINonLinear/Results"
 inputs=()
@@ -21,7 +27,7 @@ run "$HCPPIPEDIR"/ICAFIX/hcp_fix_multi_run \
   --high-pass=0 \
   --concat-fmri-name="$Results/$ConcatName/$ConcatName" \
   --motion-regression=FALSE \
-  --training-file=HCP_Style_Single_Multirun_Dedrift.RData \
+  --training-file="$FixModel" \
   --fix-threshold=10 \
   --delete-intermediates=FALSE \
   --processing-mode=HCPStyleData \

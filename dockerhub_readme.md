@@ -22,9 +22,11 @@
   - dcm2niix v1.0.20260416
 - **Added for BMB**:
   - bmb-scripts: `bids2hcp.sh`, `bids2seriesinfo.py`, step scripts `bmb_*.sh`
+  - pyfix model trained on BMB HARP data (used by `bmb_icafix.sh`)
   - [bcil](https://github.com/RIKEN-BCIL/bcil) (`c4a5e52`): HCP Pipelines QC (`hcppipe_qc`, `hcppipe_gqc`) on the MATLAB Runtime
   - [boldlag](https://github.com/RIKEN-BCIL/HCPstyle-BOLDLagMappingAndCleaning) v0.2.0
   - R 4.6 (ggplot2, qcc), jq
+  - [cuDIMOT](https://users.fmrib.ox.ac.uk/~moisesf/cudimot/) NODDI-Watson (GPU only, CUDA 10.2 build)
 - **Development Tools**: Python 3.12 (venv at `/opt/venv`), Jupyter Notebook, Git
 - **Python Packages**: numpy, pandas, matplotlib, seaborn, nibabel, nipype, pcntoolkit, and more
 - **Multi-language Support**: English and Japanese fonts/locales
@@ -133,6 +135,9 @@ bmb_diffusion.sh $S $J [--gpu]
 
 # 3. QC (bcil)
 hcppipe_qc $S $J -s -d -f
+
+# 4. NODDI-Watson (cuDIMOT; GPU only) -> T1w/Diffusion.NODDI_Watson/
+Pipeline_NODDI_Watson.sh $S/$J/T1w/Diffusion
 ```
 
 `BMB_DRYRUN=1 bmb_<step>.sh ...` prints the pipeline command without running it. `bids2hcp_map.tsv` in RawData records which BIDS files were used or dropped.
@@ -192,7 +197,9 @@ docker run \
 - **MSM**: Available in PATH
 - **MATLAB Runtime**: `/usr/local/MATLAB/MCR/R2022b`
 - **bmb-scripts**: `/usr/local/bmb-scripts` (in PATH)
+- **pyfix model (BMB HARP)**: `/usr/local/bmb-models/HARP.pyfix_model` (used by `bmb_icafix.sh`)
 - **bcil**: `/usr/local/bcil` (BCILDIR set, `bin/` in PATH, `MATLAB_MODE=runtime`)
+- **cuDIMOT**: `/usr/local/cudimot` (CUDIMOT set, `bin/` in PATH)
 
 ### Container Management
 
@@ -237,9 +244,11 @@ docker rm -f l4n-bmb
   - dcm2niix v1.0.20260416
 - **BMB 用に追加**:
   - bmb-scripts: `bids2hcp.sh`、`bids2seriesinfo.py`、ステップごとのスクリプト `bmb_*.sh`
+  - BMB HARP のデータで学習した pyfix のモデル（`bmb_icafix.sh` が使用）
   - [bcil](https://github.com/RIKEN-BCIL/bcil)（`c4a5e52`）: HCP Pipelines の QC（`hcppipe_qc`、`hcppipe_gqc`）。MATLAB Runtime で動作
   - [boldlag](https://github.com/RIKEN-BCIL/HCPstyle-BOLDLagMappingAndCleaning) v0.2.0
   - R 4.6（ggplot2、qcc）、jq
+  - [cuDIMOT](https://users.fmrib.ox.ac.uk/~moisesf/cudimot/) NODDI-Watson（GPU のみ。CUDA 10.2 向けビルド）
 - **開発ツール**: Python 3.12 (venv: `/opt/venv`), Jupyter Notebook, Git
 - **Python パッケージ**: numpy, pandas, matplotlib, seaborn, nibabel, nipype, pcntoolkit など
 - **多言語サポート**: 英語・日本語フォント/ロケール
@@ -348,6 +357,9 @@ bmb_diffusion.sh $S $J [--gpu]
 
 # 3. QC（bcil）
 hcppipe_qc $S $J -s -d -f
+
+# 4. NODDI-Watson（cuDIMOT。GPU のみ）-> T1w/Diffusion.NODDI_Watson/
+Pipeline_NODDI_Watson.sh $S/$J/T1w/Diffusion
 ```
 
 `BMB_DRYRUN=1 bmb_<ステップ>.sh ...` とすると、パイプラインのコマンドを表示するだけで実行しません。どの BIDS ファイルを使ったか（使わなかったか）は RawData の `bids2hcp_map.tsv` に記録されます。
@@ -407,7 +419,9 @@ docker run \
 - **MSM**: PATH利用可能
 - **MATLAB Runtime**: `/usr/local/MATLAB/MCR/R2022b`
 - **bmb-scripts**: `/usr/local/bmb-scripts` (in PATH)
+- **pyfix model (BMB HARP)**: `/usr/local/bmb-models/HARP.pyfix_model` (used by `bmb_icafix.sh`)
 - **bcil**: `/usr/local/bcil` (BCILDIR set, `bin/` in PATH, `MATLAB_MODE=runtime`)
+- **cuDIMOT**: `/usr/local/cudimot` (CUDIMOT set, `bin/` in PATH)
 
 ### コンテナ管理
 
@@ -445,7 +459,7 @@ docker rm -f l4n-bmb
 - GPU (optional): NVIDIA GPU with the NVIDIA Container Toolkit (Linux) or Docker Desktop + WSL2 (Windows); start with `--gpus all`
 
 ### Container Details
-- Base image: `kytk/l4n-hcppipelines:261003` (Ubuntu 22.04 LTS)
+- Base image: `kytk/l4n-hcppipelines:261004` (Ubuntu 22.04 LTS)
 - Desktop environment: XFCE4
 - VNC server: x11vnc
 - Web interface: noVNC
@@ -464,6 +478,7 @@ docker rm -f l4n-bmb
 - bcil: `c4a5e52`
 - boldlag: v0.2.0
 - R: 4.6.1 (ggplot2, qcc from Posit Package Manager, 2026-10-01 snapshot)
+- cuDIMOT: NODDI-Watson, prebuilt for CUDA 10.2 (with libcudart 10.2.89)
 
 ### License
 This container includes multiple software packages, each with its own license. Users are responsible for ensuring compliance with all applicable licenses:
@@ -473,6 +488,8 @@ This container includes multiple software packages, each with its own license. U
 - HCP Pipelines: Custom license by Washington University
 - bcil, boldlag: see their repositories (RIKEN-BCIL)
 - bmb-scripts: MIT License
+- cuDIMOT: University of Oxford (FMRIB)
+- CUDA runtime library (libcudart 10.2): NVIDIA CUDA Toolkit EULA
 - Other software: Various open-source licenses
 
 ### Support
@@ -483,5 +500,6 @@ This container includes multiple software packages, each with its own license. U
 - Issues: https://github.com/kytk/l4n-BMB/issues
 
 ### Version History
+- 2026-10-05: base `kytk/l4n-hcppipelines:261004` (wb_view fixed), cuDIMOT NODDI-Watson (GPU only).
 - 2026-10-04: bcil `c4a5e52` (group QC summary; ggQC and gridExtra no longer needed).
 - 2026-10-03: Initial release on `kytk/l4n-hcppipelines:261003`: bmb-scripts, bcil, boldlag v0.2.0, R.
