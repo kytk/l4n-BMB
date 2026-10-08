@@ -41,14 +41,14 @@
 # The base is pinned to a dated tag, so that a rebuild of the base never
 # changes BMB results silently. 261004: HCPpipelines v6.0.0, octave removed,
 # Qt6 xcb libraries for wb_view.
-ARG BASE_TAG=261007
+ARG BASE_TAG=261008
 
 # bcil-builder: clone bcil at a fixed commit and drop what the image does not
 # need *before* COPY --from (deleting in a later layer does not shrink it).
 # The v0.1.1 tag predates the MATLAB Runtime option and the prebuilt
 # bin/compiled/ binaries, so a commit is pinned instead of the tag.
 FROM ubuntu:22.04 AS bcil-builder
-ARG BCIL_COMMIT=6d6eff6d13a40bbeba00a817d201e983bdad7bed
+ARG BCIL_COMMIT=36b1705ce0d3eaabcdb6fe36275b8b806fabc53d
 # The builder is discarded, so the mirror is left in sources.list here.
 ARG UBUNTU_MIRROR=
 RUN --mount=type=bind,source=build/apt/apt-mirror.sh,target=/tmp/apt-mirror.sh \
