@@ -2,11 +2,18 @@
 
 # Dockerfile for kytk/l4n-bmb
 # Author: K. Nemoto
-# Date: 7 Oct 2026
+# Date: 8 Oct 2026
 # Description: kytk/l4n-hcppipelines plus the tools for the Brain/MINDS Beyond
 #              (BMB, "International Brain") dataset. Everything HCP Pipelines
 #              needs (FreeSurfer, FSL, MCR, Workbench, HCPpipelines) comes from
 #              the base image and is not touched here.
+#
+# Build:
+#   docker build --progress=plain -t kytk/l4n-bmb:latest . 2>&1 | tee build.log
+# With an Ubuntu mirror for apt (optional; https:// recommended):
+#   docker build --progress=plain \
+#     --build-arg UBUNTU_MIRROR=https://ftp.riken.jp/Linux/ubuntu \
+#     -t kytk/l4n-bmb:latest . 2>&1 | tee build.log
 #
 # Added on top of the base:
 #   - bcil (RIKEN-BCIL): HCP Pipelines QC (hcppipe_qc / hcppipe_gqc), run on
@@ -22,6 +29,14 @@
 #     as HCP Pipelines' RawData input with its hcppipe_conf.txt, and the
 #     bmb_*.sh step scripts run the human pipelines from that conf
 #   - the pyfix model trained on BMB HARP data, used by bmb_icafix.sh
+#
+# Optional Ubuntu mirror for apt during the build (build/apt/apt-mirror.sh,
+# the same script as in l4n-HCPpipelines), e.g.
+#   docker build --build-arg UBUNTU_MIRROR=https://ftp.riken.jp/Linux/ubuntu ...
+# Empty (the default) keeps archive.ubuntu.com. https:// keeps HTTP caches on
+# the way out of the build (some networks return broken files over HTTP,
+# which apt reports as "Hash Sum mismatch"). The final image's sources.list
+# is restored, so it ships with archive.ubuntu.com like the base image.
 
 # The base is pinned to a dated tag, so that a rebuild of the base never
 # changes BMB results silently. 261004: HCPpipelines v6.0.0, octave removed,
@@ -34,7 +49,11 @@ ARG BASE_TAG=261007
 # bin/compiled/ binaries, so a commit is pinned instead of the tag.
 FROM ubuntu:22.04 AS bcil-builder
 ARG BCIL_COMMIT=6d6eff6d13a40bbeba00a817d201e983bdad7bed
-RUN set -ex && \
+# The builder is discarded, so the mirror is left in sources.list here.
+ARG UBUNTU_MIRROR=
+RUN --mount=type=bind,source=build/apt/apt-mirror.sh,target=/tmp/apt-mirror.sh \
+    set -ex && \
+    sh /tmp/apt-mirror.sh on && \
     apt-get update && \
     apt-get install -y --no-install-recommends git ca-certificates && \
     git clone https://github.com/RIKEN-BCIL/bcil.git /usr/local/bcil && \
@@ -87,7 +106,10 @@ FROM kytk/l4n-hcppipelines:${BASE_TAG}
 # - the last two Rscript calls make the build fail here, not at QC time, if a
 #   package or the PNG device is missing
 ARG PPM_SNAPSHOT=2026-10-01
-RUN set -ex && \
+ARG UBUNTU_MIRROR=
+RUN --mount=type=bind,source=build/apt/apt-mirror.sh,target=/tmp/apt-mirror.sh \
+    set -ex && \
+    sh /tmp/apt-mirror.sh on && \
     apt-get update && \
     apt-get install -y --no-install-recommends jq && \
     wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | \
@@ -102,7 +124,8 @@ RUN set -ex && \
     Rscript -e 'for (p in c("ggplot2", "qcc")) library(p, character.only = TRUE)' && \
     Rscript -e 'f <- tempfile(fileext = ".png"); png(f); plot(1); dev.off(); stopifnot(file.size(f) > 0)' && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    sh /tmp/apt-mirror.sh off
 
 # bcil
 COPY --from=bcil-builder /usr/local/bcil/ /usr/local/bcil/

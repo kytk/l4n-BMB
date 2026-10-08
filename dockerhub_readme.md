@@ -220,6 +220,17 @@ docker start l4n-bmb
 docker rm -f l4n-bmb
 ```
 
+### Building the Image
+The image can also be built from the [GitHub repository](https://github.com/kytk/l4n-BMB); everything it needs is in the repository, and the base image is pulled from Docker Hub.
+
+```bash
+git clone https://github.com/kytk/l4n-BMB.git
+cd l4n-BMB
+docker build --progress=plain -t kytk/l4n-bmb:latest . 2>&1 | tee build.log
+```
+
+To download Ubuntu packages from a nearby mirror, add `--build-arg UBUNTU_MIRROR=https://ftp.riken.jp/Linux/ubuntu` (`https://` is recommended; the image itself keeps `archive.ubuntu.com`).
+
 ### Troubleshooting
 - If GUI doesn't load, wait 30 seconds for all services to start
 - Check container logs: `docker logs l4n-bmb`
@@ -443,6 +454,17 @@ docker start l4n-bmb
 ```bash
 docker rm -f l4n-bmb
 ```
+
+### イメージのビルド
+[GitHub のリポジトリ](https://github.com/kytk/l4n-BMB)からイメージをビルドすることもできます。必要なものはすべてリポジトリに入っていて、土台のイメージは Docker Hub から取得します。
+
+```bash
+git clone https://github.com/kytk/l4n-BMB.git
+cd l4n-BMB
+docker build --progress=plain -t kytk/l4n-bmb:latest . 2>&1 | tee build.log
+```
+
+Ubuntu のパッケージを近くのミラーから取得するには、`--build-arg UBUNTU_MIRROR=https://ftp.riken.jp/Linux/ubuntu` を付けます（`https://` を推奨。イメージ自体は `archive.ubuntu.com` のままです）。
 
 ### トラブルシューティング
 - GUIが読み込まれない場合は、すべてのサービスが開始されるまで30秒お待ちください

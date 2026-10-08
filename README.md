@@ -266,6 +266,31 @@ docker start l4n-bmb
 docker rm -f l4n-bmb
 ```
 
+### Building the Image
+
+The image is built from the `Dockerfile` in this repository with BuildKit (the default since Docker 23). Everything it needs is in the repository; the base image `kytk/l4n-hcppipelines` (the tag in `BASE_TAG`) is pulled from Docker Hub, and bcil, boldlag, cuDIMOT and CUDA are downloaded during the build. No GPU is needed to build.
+
+```bash
+git clone https://github.com/kytk/l4n-BMB.git
+cd l4n-BMB
+docker build --progress=plain -t kytk/l4n-bmb:latest . 2>&1 | tee build.log
+```
+
+To build on another tag of the base image, change `ARG BASE_TAG=...` in the `Dockerfile`. Keeping the tag in the `Dockerfile` records which base each version of this repository is built on.
+
+**Using an Ubuntu mirror (optional):** apt downloads from `archive.ubuntu.com` by default. A nearby mirror can be given with `UBUNTU_MIRROR`:
+
+```bash
+docker build --progress=plain \
+  --build-arg UBUNTU_MIRROR=https://ftp.riken.jp/Linux/ubuntu \
+  -t kytk/l4n-bmb:latest . 2>&1 | tee build.log
+```
+
+- `https://` is recommended. On some networks (e.g. behind a caching proxy) HTTP downloads come back broken and apt stops with "Hash Sum mismatch"
+- The mirror is used only during the build; the image's `/etc/apt/sources.list` still points to `archive.ubuntu.com`
+- `security.ubuntu.com` is not replaced
+- Changing the value rebuilds the stages that use apt, so keep using the same mirror
+
 ### Notes
 
 - This Docker image is provided for research and educational purposes only
@@ -544,6 +569,31 @@ docker start l4n-bmb
 ```bash
 docker rm -f l4n-bmb
 ```
+
+### イメージのビルド
+
+イメージは、このリポジトリの `Dockerfile` から BuildKit（Docker 23 以降の既定）でビルドします。必要なものはすべてリポジトリに入っています。土台のイメージ `kytk/l4n-hcppipelines`（`BASE_TAG` のタグ）は Docker Hub から取得し、bcil、boldlag、cuDIMOT、CUDA はビルド中にダウンロードします。ビルドに GPU は要りません。
+
+```bash
+git clone https://github.com/kytk/l4n-BMB.git
+cd l4n-BMB
+docker build --progress=plain -t kytk/l4n-bmb:latest . 2>&1 | tee build.log
+```
+
+土台のイメージの別のタグでビルドするときは、`Dockerfile` の `ARG BASE_TAG=...` を書き換えます。タグを `Dockerfile` に書いておくことで、このリポジトリの各版がどの土台でビルドされたかが残ります。
+
+**Ubuntu のミラーを使う（任意）：** apt は既定では `archive.ubuntu.com` から取得します。`UBUNTU_MIRROR` で近くのミラーを指定できます：
+
+```bash
+docker build --progress=plain \
+  --build-arg UBUNTU_MIRROR=https://ftp.riken.jp/Linux/ubuntu \
+  -t kytk/l4n-bmb:latest . 2>&1 | tee build.log
+```
+
+- `https://` を推奨します。ネットワークによっては（キャッシュするプロキシの内側など）HTTP で取得したファイルが壊れていて、apt が「Hash Sum mismatch」で止まります
+- ミラーを使うのはビルドの間だけです。イメージの `/etc/apt/sources.list` は `archive.ubuntu.com` のままです
+- `security.ubuntu.com` は置き換えません
+- 値を変えると apt を使うステージがビルドし直しになるので、同じミラーを使い続けてください
 
 ### 注意事項
 
