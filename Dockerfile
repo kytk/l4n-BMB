@@ -2,7 +2,7 @@
 
 # Dockerfile for kytk/l4n-bmb
 # Author: K. Nemoto
-# Date: 8 Oct 2026
+# Date: 12 Oct 2026
 # Description: kytk/l4n-hcppipelines plus the tools for the Brain/MINDS Beyond
 #              (BMB, "International Brain") dataset. Everything HCP Pipelines
 #              needs (FreeSurfer, FSL, MCR, Workbench, HCPpipelines) comes from
@@ -41,7 +41,7 @@
 # The base is pinned to a dated tag, so that a rebuild of the base never
 # changes BMB results silently. 261004: HCPpipelines v6.0.0, octave removed,
 # Qt6 xcb libraries for wb_view.
-ARG BASE_TAG=261008
+ARG BASE_TAG=261012
 
 # bcil-builder: clone bcil at a fixed commit and drop what the image does not
 # need *before* COPY --from (deleting in a later layer does not shrink it).
