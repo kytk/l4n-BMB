@@ -1,10 +1,10 @@
 #!/bin/bash
-# bmb_fmrivolume.sh: fMRIVolume for the runs of one BMB subject.
+# bmb_30_fmrivolume.sh: fMRIVolume for the runs of one BMB subject.
 # As Examples/Scripts/GenericfMRIVolumeProcessingPipelineBatch.sh (TOPUP,
 # SEBASED bias correction, 2 mm). Per run, the BOLD, SBRef, SE field map pair,
 # echo spacing and phase encoding direction come from hcppipe_conf.txt.
 #
-# Usage: bmb_fmrivolume.sh <StudyFolder> <Subject> [fMRIName]
+# Usage: bmb_30_fmrivolume.sh <StudyFolder> <Subject> [fMRIName]
 #   fMRIName: process only this run (e.g. BOLD_REST_1_AP); default all runs
 
 BMB_USAGE="[fMRIName]"

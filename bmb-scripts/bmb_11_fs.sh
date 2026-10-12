@@ -1,8 +1,8 @@
 #!/bin/bash
-# bmb_fs.sh: FreeSurfer for one BMB subject.
+# bmb_11_fs.sh: FreeSurfer for one BMB subject.
 # As Examples/Scripts/FreeSurferPipelineBatch.sh.
 #
-# Usage: bmb_fs.sh <StudyFolder> <Subject>
+# Usage: bmb_11_fs.sh <StudyFolder> <Subject>
 
 source "$(dirname "$(readlink -f "$0")")/bmb_common.sh"
 

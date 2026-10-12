@@ -1,9 +1,9 @@
 #!/bin/bash
-# bmb_prefs.sh: PreFreeSurfer for one BMB subject (human, HCP-style data).
+# bmb_10_prefs.sh: PreFreeSurfer for one BMB subject (human, HCP-style data).
 # Parameters follow Examples/Scripts/PreFreeSurferPipelineBatch.sh, with
 # readout distortion correction by TOPUP (spin-echo field maps).
 #
-# Usage: bmb_prefs.sh <StudyFolder> <Subject>
+# Usage: bmb_10_prefs.sh <StudyFolder> <Subject>
 
 source "$(dirname "$(readlink -f "$0")")/bmb_common.sh"
 

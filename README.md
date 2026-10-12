@@ -25,7 +25,7 @@ From the base image `kytk/l4n-hcppipelines` (tag `261004`):
 Added for BMB:
 
 - **bmb-scripts** (this repository): `bids2hcp.sh`, `bids2seriesinfo.py` and the step scripts `bmb_*.sh` (see [Processing BMB Data](#processing-bmb-data))
-- **pyfix model trained on BMB HARP data** (`/usr/local/bmb-models/HARP.pyfix_model`): the ICA-FIX classifier `bmb_icafix.sh` uses
+- **pyfix model trained on BMB HARP data** (`/usr/local/bmb-models/HARP.pyfix_model`): the ICA-FIX classifier `bmb_32_icafix.sh` uses
 - **[bcil](https://github.com/RIKEN-BCIL/bcil)** (commit `c4a5e52`): QC reports for HCP Pipelines (`hcppipe_qc`, `hcppipe_gqc`), run on the MATLAB Runtime
 - **[boldlag](https://github.com/RIKEN-BCIL/HCPstyle-BOLDLagMappingAndCleaning)** v0.2.0: BOLD lag mapping and cleaning (in `/opt/venv`)
 - **R** 4.6 with ggplot2 and qcc, **jq** (used by bcil)
@@ -161,18 +161,26 @@ Each step script runs one stage for one subject. They read `hcppipe_conf.txt` an
 S=~/share/hcp
 J=9036_UHISkyrafHARP001
 
-bmb_prefs.sh       $S $J            # PreFreeSurfer (TOPUP with the SE field maps)
-bmb_fs.sh          $S $J            # FreeSurfer
-bmb_postfs.sh      $S $J            # PostFreeSurfer
-bmb_fmrivolume.sh  $S $J [fMRIName] # fMRIVolume (all runs, or one run)
-bmb_fmrisurface.sh $S $J [fMRIName] # fMRISurface
-bmb_icafix.sh      $S $J            # multi-run ICA-FIX (pyfix, BMB HARP model) over all runs
-bmb_diffusion.sh   $S $J [--gpu]    # DiffusionPreprocessing (eddy_cpu, or eddy_cuda with --gpu)
+# 1x: structural
+bmb_10_prefs.sh       $S $J            # PreFreeSurfer (TOPUP with the SE field maps)
+bmb_11_fs.sh          $S $J            # FreeSurfer
+bmb_12_postfs.sh      $S $J            # PostFreeSurfer
+# 2x: diffusion
+bmb_20_diffusion.sh   $S $J [--gpu]    # DiffusionPreprocessing (eddy_cpu, or eddy_cuda with --gpu)
+# 3x: fMRI
+bmb_30_fmrivolume.sh  $S $J [fMRIName] # fMRIVolume (all runs, or one run)
+bmb_31_fmrisurface.sh $S $J [fMRIName] # fMRISurface
+bmb_32_icafix.sh      $S $J            # multi-run ICA-FIX (pyfix, BMB HARP model) over all runs
+bmb_33_postfix.sh     $S $J            # PostFix (ICA classification scenes, Signal.txt)
+bmb_34_msmall.sh      $S $J            # MSMAll registration
+bmb_35_dedrift.sh     $S $J            # DeDriftAndResample (MSMAll), MR FIX reapplied
+bmb_36_fmristats.sh   $S $J            # fMRIStats (mTSNR, fCNR, percent BOLD), with Octave
 ```
 
-- Run them in this order. `bmb_diffusion.sh` needs PostFreeSurfer; `bmb_icafix.sh` needs fMRIVolume and fMRISurface of all runs.
-- `BMB_DRYRUN=1 bmb_prefs.sh $S $J` prints the pipeline command without running it.
-- `bmb_diffusion.sh` sets `--combine-data-flag` from `hcppipe_conf.txt`: 2 when the AP and PA series do not share a gradient table (HARP), 1 otherwise.
+- The tens digit is the track (1 = structural, 2 = diffusion, 3 = fMRI), the units digit the order within it. Run 1x first; after `bmb_12_postfs.sh`, the 2x and 3x tracks are independent and can run in parallel, each in its own order.
+- Within 3x, `bmb_33_postfix.sh` and `bmb_34_msmall.sh` → `bmb_35_dedrift.sh` are independent too; `bmb_36_fmristats.sh` needs both. `bmb_32_icafix.sh` needs fMRIVolume and fMRISurface of all runs.
+- `BMB_DRYRUN=1 bmb_10_prefs.sh $S $J` prints the pipeline command without running it.
+- `bmb_20_diffusion.sh` sets `--combine-data-flag` from `hcppipe_conf.txt`: 2 when the AP and PA series do not share a gradient table (HARP), 1 otherwise.
 - `--gpu` needs a GPU in the container (see [Using an NVIDIA GPU](#using-an-nvidia-gpu)).
 
 #### 3. QC (bcil)
@@ -186,7 +194,7 @@ hcppipe_gqc <Group> <Protocol> <Subj1>@<Subj2> ...   # group QC
 
 #### 4. NODDI (cuDIMOT, GPU only)
 
-After `bmb_diffusion.sh`, `T1w/Diffusion/` has what cuDIMOT expects (`data`, `nodif_brain_mask`, `bvals`, `bvecs`):
+After `bmb_20_diffusion.sh`, `T1w/Diffusion/` has what cuDIMOT expects (`data`, `nodif_brain_mask`, `bvals`, `bvecs`):
 
 ```bash
 Pipeline_NODDI_Watson.sh $S/$J/T1w/Diffusion           # axial diffusivity 1.7e-3 mm²/s (white matter)
@@ -247,7 +255,7 @@ nvidia-smi                          # the GPU is listed
 find_cuda_exe eddy_cuda eddy_cpu    # prints /usr/local/fsl/bin/eddy_cuda
 ```
 
-Then run `bmb_diffusion.sh <StudyFolder> <Subject> --gpu`, or cuDIMOT.
+Then run `bmb_20_diffusion.sh <StudyFolder> <Subject> --gpu`, or cuDIMOT.
 
 ### Container Management
 
@@ -329,7 +337,7 @@ For issues and questions, please visit:
 BMB 用に追加したもの：
 
 - **bmb-scripts**（このリポジトリ）: `bids2hcp.sh`、`bids2seriesinfo.py`、ステップごとのスクリプト `bmb_*.sh`（[BMB データの処理](#bmb-データの処理) を参照）
-- **BMB HARP のデータで学習した pyfix のモデル**（`/usr/local/bmb-models/HARP.pyfix_model`）: `bmb_icafix.sh` が ICA-FIX の分類に使います
+- **BMB HARP のデータで学習した pyfix のモデル**（`/usr/local/bmb-models/HARP.pyfix_model`）: `bmb_32_icafix.sh` が ICA-FIX の分類に使います
 - **[bcil](https://github.com/RIKEN-BCIL/bcil)**（コミット `c4a5e52`）: HCP Pipelines の QC レポート（`hcppipe_qc`、`hcppipe_gqc`）。MATLAB Runtime で動きます
 - **[boldlag](https://github.com/RIKEN-BCIL/HCPstyle-BOLDLagMappingAndCleaning)** v0.2.0: BOLD lag mapping と cleaning（`/opt/venv` に導入）
 - **R** 4.6（ggplot2、qcc）、**jq**（bcil が使います）
@@ -465,18 +473,18 @@ bids2hcp.sh -s sub-9036 -e ses-UHISkyrafHARP001 -b ~/share/bids -o ~/share/hcp
 S=~/share/hcp
 J=9036_UHISkyrafHARP001
 
-bmb_prefs.sh       $S $J            # PreFreeSurfer（SE フィールドマップで TOPUP）
-bmb_fs.sh          $S $J            # FreeSurfer
-bmb_postfs.sh      $S $J            # PostFreeSurfer
-bmb_fmrivolume.sh  $S $J [fMRIName] # fMRIVolume（全 run、または 1 run）
-bmb_fmrisurface.sh $S $J [fMRIName] # fMRISurface
-bmb_icafix.sh      $S $J            # 全 run を連結した multi-run ICA-FIX（pyfix、BMB HARP のモデル）
-bmb_diffusion.sh   $S $J [--gpu]    # DiffusionPreprocessing（eddy_cpu。--gpu で eddy_cuda）
+bmb_10_prefs.sh       $S $J            # PreFreeSurfer（SE フィールドマップで TOPUP）
+bmb_11_fs.sh          $S $J            # FreeSurfer
+bmb_12_postfs.sh      $S $J            # PostFreeSurfer
+bmb_30_fmrivolume.sh  $S $J [fMRIName] # fMRIVolume（全 run、または 1 run）
+bmb_31_fmrisurface.sh $S $J [fMRIName] # fMRISurface
+bmb_32_icafix.sh      $S $J            # 全 run を連結した multi-run ICA-FIX（pyfix、BMB HARP のモデル）
+bmb_20_diffusion.sh   $S $J [--gpu]    # DiffusionPreprocessing（eddy_cpu。--gpu で eddy_cuda）
 ```
 
-- この順に実行してください。`bmb_diffusion.sh` は PostFreeSurfer の後、`bmb_icafix.sh` は全 run の fMRIVolume と fMRISurface の後に実行します。
-- `BMB_DRYRUN=1 bmb_prefs.sh $S $J` とすると、パイプラインのコマンドを表示するだけで実行しません。
-- `bmb_diffusion.sh` の `--combine-data-flag` は `hcppipe_conf.txt` から取ります。AP と PA で勾配の表が違う場合（HARP）は 2、それ以外は 1 です。
+- この順に実行してください。`bmb_20_diffusion.sh` は PostFreeSurfer の後、`bmb_32_icafix.sh` は全 run の fMRIVolume と fMRISurface の後に実行します。
+- `BMB_DRYRUN=1 bmb_10_prefs.sh $S $J` とすると、パイプラインのコマンドを表示するだけで実行しません。
+- `bmb_20_diffusion.sh` の `--combine-data-flag` は `hcppipe_conf.txt` から取ります。AP と PA で勾配の表が違う場合（HARP）は 2、それ以外は 1 です。
 - `--gpu` を使うには、コンテナから GPU が見えている必要があります（[NVIDIA GPU を使う](#nvidia-gpu-を使う) を参照）。
 
 #### 3. QC（bcil）
@@ -490,7 +498,7 @@ hcppipe_gqc <Group> <Protocol> <Subj1>@<Subj2> ...   # グループ QC
 
 #### 4. NODDI（cuDIMOT、GPU のみ）
 
-`bmb_diffusion.sh` の後の `T1w/Diffusion/` には、cuDIMOT が必要とするもの（`data`、`nodif_brain_mask`、`bvals`、`bvecs`）がそろっています：
+`bmb_20_diffusion.sh` の後の `T1w/Diffusion/` には、cuDIMOT が必要とするもの（`data`、`nodif_brain_mask`、`bvals`、`bvecs`）がそろっています：
 
 ```bash
 Pipeline_NODDI_Watson.sh $S/$J/T1w/Diffusion           # axial diffusivity 1.7e-3 mm²/s（白質用）
@@ -551,7 +559,7 @@ nvidia-smi                          # GPU が表示される
 find_cuda_exe eddy_cuda eddy_cpu    # /usr/local/fsl/bin/eddy_cuda と表示される
 ```
 
-そのうえで `bmb_diffusion.sh <StudyFolder> <Subject> --gpu` や cuDIMOT を実行します。
+そのうえで `bmb_20_diffusion.sh <StudyFolder> <Subject> --gpu` や cuDIMOT を実行します。
 
 ### コンテナ管理
 

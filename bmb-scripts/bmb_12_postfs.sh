@@ -1,8 +1,8 @@
 #!/bin/bash
-# bmb_postfs.sh: PostFreeSurfer for one BMB subject.
+# bmb_12_postfs.sh: PostFreeSurfer for one BMB subject.
 # As Examples/Scripts/PostFreeSurferPipelineBatch.sh.
 #
-# Usage: bmb_postfs.sh <StudyFolder> <Subject>
+# Usage: bmb_12_postfs.sh <StudyFolder> <Subject>
 
 source "$(dirname "$(readlink -f "$0")")/bmb_common.sh"
 

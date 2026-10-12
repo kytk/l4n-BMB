@@ -28,7 +28,9 @@
 #   - bmb-scripts (this repository): bids2hcp.sh lays out a BMB BIDS session
 #     as HCP Pipelines' RawData input with its hcppipe_conf.txt, and the
 #     bmb_*.sh step scripts run the human pipelines from that conf
-#   - the pyfix model trained on BMB HARP data, used by bmb_icafix.sh
+#   - the pyfix model trained on BMB HARP data, used by bmb_32_icafix.sh
+#   - Octave (jammy's 6.4) for bmb_36_fmristats.sh, with FSL's etc/matlab
+#     and an endsWith for Octave 6 on its path
 #
 # Optional Ubuntu mirror for apt during the build (build/apt/apt-mirror.sh,
 # the same script as in l4n-HCPpipelines), e.g.
@@ -126,6 +128,27 @@ RUN --mount=type=bind,source=build/apt/apt-mirror.sh,target=/tmp/apt-mirror.sh \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
     sh /tmp/apt-mirror.sh off
+
+# Octave, for bmb_36_fmristats.sh only (fMRIStats.sh --matlab-run-mode=2).
+# The base removed Octave (every other HCP step runs compiled, mode 0), but
+# the compiled fMRIStats of HCPpipelines v6.0.0 lacks FSL's read_avw/save_avw
+# and cannot process the volume. jammy's Octave is 6.4, which lacks endsWith
+# (fMRIStats_SummaryCSV.m), so build/octave/compat has one; the site
+# octaverc (a link to /etc/octaverc) puts it and FSL's etc/matlab on the path
+# of every user. The last line fails the build if either is not found.
+RUN --mount=type=bind,source=build/apt/apt-mirror.sh,target=/tmp/apt-mirror.sh \
+    --mount=type=bind,source=build/octave,target=/tmp/octave \
+    set -ex && \
+    sh /tmp/apt-mirror.sh on && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends octave && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
+    sh /tmp/apt-mirror.sh off && \
+    mkdir -p /usr/local/bmb-octave && \
+    cp -r /tmp/octave/compat /usr/local/bmb-octave/ && \
+    cat /tmp/octave/octaverc >> /usr/share/octave/site/m/startup/octaverc && \
+    octave-cli -q --eval 'assert (exist ("read_avw") == 2 && exist ("endsWith") == 2 && endsWith ("aSTD", "STD"))'
 
 # bcil
 COPY --from=bcil-builder /usr/local/bcil/ /usr/local/bcil/

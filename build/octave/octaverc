@@ -1,0 +1,10 @@
+
+## l4n-bmb: appended to Octave's site startup file
+## (/usr/share/octave/site/m/startup/octaverc), for every user.
+## - FSL's MATLAB functions (read_avw, save_avw), which HCP Pipelines'
+##   MATLAB code calls but does not addpath (fMRIStats with ProcessVolume)
+## - endsWith for Octave 6 (fMRIStats_SummaryCSV.m); not when Octave has it
+addpath ("/usr/local/fsl/etc/matlab");
+if (! exist ("endsWith"))
+  addpath ("/usr/local/bmb-octave/compat");
+endif

@@ -1,10 +1,10 @@
 #!/bin/bash
-# bmb_diffusion.sh: DiffusionPreprocessing for one BMB subject.
+# bmb_20_diffusion.sh: DiffusionPreprocessing for one BMB subject.
 # As Examples/Scripts/DiffusionPreprocessingBatch.sh. Pos = PA, Neg = AP and
 # the CombineDataFlag come from hcppipe_conf.txt (bids2hcp.sh sets the flag
 # to 2 when the AP and PA series do not share a gradient table, e.g. HARP).
 #
-# Usage: bmb_diffusion.sh <StudyFolder> <Subject> [--gpu]
+# Usage: bmb_20_diffusion.sh <StudyFolder> <Subject> [--gpu]
 #   --gpu: use eddy_cuda (default: eddy_cpu). Needs a GPU passed to the
 #          container (docker run --gpus all; see README.md)
 

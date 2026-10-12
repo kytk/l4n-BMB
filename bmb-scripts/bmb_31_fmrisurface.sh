@@ -1,8 +1,8 @@
 #!/bin/bash
-# bmb_fmrisurface.sh: fMRISurface for the runs of one BMB subject.
+# bmb_31_fmrisurface.sh: fMRISurface for the runs of one BMB subject.
 # As Examples/Scripts/GenericfMRISurfaceProcessingPipelineBatch.sh.
 #
-# Usage: bmb_fmrisurface.sh <StudyFolder> <Subject> [fMRIName]
+# Usage: bmb_31_fmrisurface.sh <StudyFolder> <Subject> [fMRIName]
 #   fMRIName: process only this run (e.g. BOLD_REST_1_AP); default all runs
 
 BMB_USAGE="[fMRIName]"

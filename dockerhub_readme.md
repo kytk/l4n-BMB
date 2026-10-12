@@ -22,7 +22,7 @@
   - dcm2niix v1.0.20260416
 - **Added for BMB**:
   - bmb-scripts: `bids2hcp.sh`, `bids2seriesinfo.py`, step scripts `bmb_*.sh`
-  - pyfix model trained on BMB HARP data (used by `bmb_icafix.sh`)
+  - pyfix model trained on BMB HARP data (used by `bmb_32_icafix.sh`)
   - [bcil](https://github.com/RIKEN-BCIL/bcil) (`c4a5e52`): HCP Pipelines QC (`hcppipe_qc`, `hcppipe_gqc`) on the MATLAB Runtime
   - [boldlag](https://github.com/RIKEN-BCIL/HCPstyle-BOLDLagMappingAndCleaning) v0.2.0
   - R 4.6 (ggplot2, qcc), jq
@@ -124,14 +124,19 @@ One BIDS session becomes one HCP subject `<ID>_<session>` (e.g. `sub-9036` + `se
 bids2hcp.sh -s sub-9036 -e ses-UHISkyrafHARP001 -b ~/share/bids -o ~/share/hcp
 
 # 2. HCP Pipelines, one step per script (human pipelines; do not use *BatchNHP.sh)
+#    1x structural first; then 2x (diffusion) and 3x (fMRI) can run in parallel
 S=~/share/hcp; J=9036_UHISkyrafHARP001
-bmb_prefs.sh $S $J
-bmb_fs.sh $S $J
-bmb_postfs.sh $S $J
-bmb_fmrivolume.sh $S $J
-bmb_fmrisurface.sh $S $J
-bmb_icafix.sh $S $J
-bmb_diffusion.sh $S $J [--gpu]
+bmb_10_prefs.sh $S $J
+bmb_11_fs.sh $S $J
+bmb_12_postfs.sh $S $J
+bmb_20_diffusion.sh $S $J [--gpu]
+bmb_30_fmrivolume.sh $S $J
+bmb_31_fmrisurface.sh $S $J
+bmb_32_icafix.sh $S $J
+bmb_33_postfix.sh $S $J
+bmb_34_msmall.sh $S $J
+bmb_35_dedrift.sh $S $J
+bmb_36_fmristats.sh $S $J
 
 # 3. QC (bcil)
 hcppipe_qc $S $J -s -d -f
@@ -181,7 +186,7 @@ docker run \
   kytk/l4n-bmb:latest
 ```
 
-`utility` makes `nvidia-smi` available in the container; FSL's `eddy` and `find_cuda_exe` use it to decide whether to run the CUDA version. Check with `nvidia-smi` and `find_cuda_exe eddy_cuda eddy_cpu` (prints `/usr/local/fsl/bin/eddy_cuda`). Then run `bmb_diffusion.sh <StudyFolder> <Subject> --gpu`.
+`utility` makes `nvidia-smi` available in the container; FSL's `eddy` and `find_cuda_exe` use it to decide whether to run the CUDA version. Check with `nvidia-smi` and `find_cuda_exe eddy_cuda eddy_cpu` (prints `/usr/local/fsl/bin/eddy_cuda`). Then run `bmb_20_diffusion.sh <StudyFolder> <Subject> --gpu`.
 
 ### Port Mapping
 - Port `6080`: noVNC web interface
@@ -199,7 +204,7 @@ docker run \
 - **MSM**: Available in PATH
 - **MATLAB Runtime**: `/usr/local/MATLAB/MCR/R2022b`
 - **bmb-scripts**: `/usr/local/bmb-scripts` (in PATH)
-- **pyfix model (BMB HARP)**: `/usr/local/bmb-models/HARP.pyfix_model` (used by `bmb_icafix.sh`)
+- **pyfix model (BMB HARP)**: `/usr/local/bmb-models/HARP.pyfix_model` (used by `bmb_32_icafix.sh`)
 - **bcil**: `/usr/local/bcil` (BCILDIR set, `bin/` in PATH, `MATLAB_MODE=runtime`)
 - **cuDIMOT**: `/usr/local/cudimot` (CUDIMOT set, `bin/` in PATH)
 
@@ -257,7 +262,7 @@ To download Ubuntu packages from a nearby mirror, add `--build-arg UBUNTU_MIRROR
   - dcm2niix v1.0.20260416
 - **BMB 用に追加**:
   - bmb-scripts: `bids2hcp.sh`、`bids2seriesinfo.py`、ステップごとのスクリプト `bmb_*.sh`
-  - BMB HARP のデータで学習した pyfix のモデル（`bmb_icafix.sh` が使用）
+  - BMB HARP のデータで学習した pyfix のモデル（`bmb_32_icafix.sh` が使用）
   - [bcil](https://github.com/RIKEN-BCIL/bcil)（`c4a5e52`）: HCP Pipelines の QC（`hcppipe_qc`、`hcppipe_gqc`）。MATLAB Runtime で動作
   - [boldlag](https://github.com/RIKEN-BCIL/HCPstyle-BOLDLagMappingAndCleaning) v0.2.0
   - R 4.6（ggplot2、qcc）、jq
@@ -359,14 +364,19 @@ BIDS の 1 セッションを、1 つの HCP の被験者 `<ID>_<セッション
 bids2hcp.sh -s sub-9036 -e ses-UHISkyrafHARP001 -b ~/share/bids -o ~/share/hcp
 
 # 2. HCP Pipelines。1 スクリプト 1 ステップ（人用のパイプライン。*BatchNHP.sh は使わない）
+#    1x（構造）を先に。その後の 2x（拡散）と 3x（fMRI）は並列に実行できる
 S=~/share/hcp; J=9036_UHISkyrafHARP001
-bmb_prefs.sh $S $J
-bmb_fs.sh $S $J
-bmb_postfs.sh $S $J
-bmb_fmrivolume.sh $S $J
-bmb_fmrisurface.sh $S $J
-bmb_icafix.sh $S $J
-bmb_diffusion.sh $S $J [--gpu]
+bmb_10_prefs.sh $S $J
+bmb_11_fs.sh $S $J
+bmb_12_postfs.sh $S $J
+bmb_20_diffusion.sh $S $J [--gpu]
+bmb_30_fmrivolume.sh $S $J
+bmb_31_fmrisurface.sh $S $J
+bmb_32_icafix.sh $S $J
+bmb_33_postfix.sh $S $J
+bmb_34_msmall.sh $S $J
+bmb_35_dedrift.sh $S $J
+bmb_36_fmristats.sh $S $J
 
 # 3. QC（bcil）
 hcppipe_qc $S $J -s -d -f
@@ -416,7 +426,7 @@ docker run \
   kytk/l4n-bmb:latest
 ```
 
-`utility` を指定すると、コンテナ内で `nvidia-smi` が使えます。FSL の `eddy` や `find_cuda_exe` はこれを使って CUDA 版を使うか決めます。`nvidia-smi` と `find_cuda_exe eddy_cuda eddy_cpu`（`/usr/local/fsl/bin/eddy_cuda` と表示される）で確認できます。そのうえで `bmb_diffusion.sh <StudyFolder> <Subject> --gpu` を実行します。
+`utility` を指定すると、コンテナ内で `nvidia-smi` が使えます。FSL の `eddy` や `find_cuda_exe` はこれを使って CUDA 版を使うか決めます。`nvidia-smi` と `find_cuda_exe eddy_cuda eddy_cpu`（`/usr/local/fsl/bin/eddy_cuda` と表示される）で確認できます。そのうえで `bmb_20_diffusion.sh <StudyFolder> <Subject> --gpu` を実行します。
 
 ### ポートマッピング
 - ポート `6080`: noVNC Webインターフェース
@@ -434,7 +444,7 @@ docker run \
 - **MSM**: PATH利用可能
 - **MATLAB Runtime**: `/usr/local/MATLAB/MCR/R2022b`
 - **bmb-scripts**: `/usr/local/bmb-scripts` (in PATH)
-- **pyfix model (BMB HARP)**: `/usr/local/bmb-models/HARP.pyfix_model` (used by `bmb_icafix.sh`)
+- **pyfix model (BMB HARP)**: `/usr/local/bmb-models/HARP.pyfix_model` (used by `bmb_32_icafix.sh`)
 - **bcil**: `/usr/local/bcil` (BCILDIR set, `bin/` in PATH, `MATLAB_MODE=runtime`)
 - **cuDIMOT**: `/usr/local/cudimot` (CUDIMOT set, `bin/` in PATH)
 
