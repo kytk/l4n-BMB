@@ -50,7 +50,7 @@ ARG BASE_TAG=261012
 # The v0.1.1 tag predates the MATLAB Runtime option and the prebuilt
 # bin/compiled/ binaries, so a commit is pinned instead of the tag.
 FROM ubuntu:22.04 AS bcil-builder
-ARG BCIL_COMMIT=36b1705ce0d3eaabcdb6fe36275b8b806fabc53d
+ARG BCIL_COMMIT=18fa84399670a2e8831691ebd918e98ce0c9944f
 # The builder is discarded, so the mirror is left in sources.list here.
 ARG UBUNTU_MIRROR=
 RUN --mount=type=bind,source=build/apt/apt-mirror.sh,target=/tmp/apt-mirror.sh \
